@@ -12,7 +12,7 @@ public class Main {
 
     public static void main(String[] args) {
         HttpSrv srv;
-        srv = new HttpSrv(9090);
+        srv = new HttpSrv(9091);
 
         // Обработка запросов из терминала
         srv.onTerminal((HttpResponse Head) -> {
