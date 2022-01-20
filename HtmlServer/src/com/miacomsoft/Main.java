@@ -2,6 +2,7 @@ package com.miacomsoft;
 
 import org.json.JSONObject;
 
+import java.io.File;
 import java.net.*;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
@@ -11,6 +12,7 @@ import java.util.Set;
 public class Main {
 
     public static void main(String[] args) {
+        String ROOT_DIR = new File("").getAbsolutePath();
         HttpSrv srv;
         srv = new HttpSrv(9091);
 
@@ -45,10 +47,10 @@ public class Main {
         });
 
         // Отправка файла при указании ресурса
-        srv.onPage("test.html","F:\\javaProject\\HtmlServer013\\www\\index.html");
+        srv.onPage("test.html",ROOT_DIR+"\\www\\index.html");
 
         //  Указываем директорию в которой распложен контент
-        srv.onPage("F:\\javaProject\\HtmlServer013\\www\\");
+        srv.onPage(ROOT_DIR+"\\www\\");
 
         // Запуск сервера
         srv.start();
