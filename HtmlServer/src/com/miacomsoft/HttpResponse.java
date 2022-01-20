@@ -26,7 +26,6 @@ import static com.miacomsoft.HttpSrv.ContentType;
  * @author MyasnikovIA
  */
 public class HttpResponse {
-
     public int countQuery = 0;
     private boolean isExit = false;
     public JSONObject request = new JSONObject();
@@ -55,9 +54,12 @@ public class HttpResponse {
         this.inputStreamReader = new InputStreamReader(this.is);
         this.contentZapros = "";
         this.session=session;
-
     }
 
+    /**
+     * Закрытие соединения
+     * @throws IOException
+     */
     public void close() throws IOException {
         if (socket.isConnected() == false) {
             return;
@@ -67,15 +69,28 @@ public class HttpResponse {
         socket.close();
     }
 
+    /**
+     * Получить статус подключения (устарело)
+     * @return
+     */
     public boolean getStatusExut() {
         return isExit;
     }
 
+    /***
+     * Изменить статус подключения (устарело)
+     * @return
+     */
     public boolean exit() {
         isExit = !isExit;
         return isExit;
     }
 
+    /***
+     * Чтение текста от терминального клиента
+     * @return
+     * @throws IOException
+     */
     public StringBuffer readText() throws IOException {
         int subcharInt;
         StringBuffer sbSubTmp = new StringBuffer();
@@ -96,7 +111,7 @@ public class HttpResponse {
     }
 
     /**
-     * Получить МАС адрес клиента
+     * Получить МАС адрес клиента (работает с ошибками - применять не стоит)
      *
      * @param adress
      * @return
@@ -124,6 +139,11 @@ public class HttpResponse {
         return macStr;
     }
 
+    /**
+     *  Отправка текста как HTML страницу (Устарело)
+     * @param Head
+     * @param content
+     */
     public void sendHtml(HttpResponse Head, String content) {
         try {
             OutputStream os = Head.os;
@@ -149,6 +169,12 @@ public class HttpResponse {
         }
     }
 
+    /**
+     *  Отправка бинарного файла клиенту (для браузера)
+     * @param Head
+     * @param pageFile
+     * @throws IOException
+     */
     public void sendFile(HttpResponse Head, File pageFile) throws IOException {
         System.out.println(pageFile.getAbsolutePath());
         String TypeCont = ContentType(pageFile);
@@ -179,6 +205,10 @@ public class HttpResponse {
         sendJson( json.toString());
     }
 
+    /**
+     * Отправка JSON строки клиенту браузеру
+     * @param jsonObject
+     */
     public void sendJson(String jsonObject) {
         try {
             os.write("HTTP/1.1 200 OK\r\n".getBytes());
@@ -208,16 +238,22 @@ public class HttpResponse {
     }
 
 
-
-    public void Head(String contentType) throws IOException, JSONException {
+    /***
+     *  Отправляем заголовок HTML страниц
+     * @param contentType - Указываем тип ответа для  интерпритации браузером (MIME type)
+     * @throws IOException
+     */
+    public void Head(String contentType) throws IOException {
         os.write("HTTP/1.1 200 OK\r\n".getBytes());
         DateFormat df = DateFormat.getTimeInstance();
         df.setTimeZone(TimeZone.getTimeZone("GMT"));
         String typeCont = "text/html";
-        if (contentType.indexOf(".") != -1) {
+        if(contentType.length()==0) {
+            if (request.has("ContentType")) {
+                typeCont = request.getString("ContentType");
+            }
+        }else if (contentType.indexOf(".") != -1) {
             typeCont = ContentType(new File(contentType));
-        } else {
-            typeCont = request.getString("ContentType");
         }
         os.write(("Content-Type: " + typeCont + "; charset=utf-8\r\n").getBytes());
         os.write("Access-Control-Allow-Origin: *\r\n".getBytes());
@@ -227,42 +263,50 @@ public class HttpResponse {
         os.write("Server: HTMLserver\r\n\r\n".getBytes());
     }
 
-
+    /***
+     * Отправляем заголовок HTML страниц (MIME тип по умолчанию "text/html" )
+     * @throws IOException
+     * @throws JSONException
+     */
     public void Head() throws IOException, JSONException {
-        os.write("HTTP/1.1 200 OK\r\n".getBytes());
-        // дата создания в GMT
-        DateFormat df = DateFormat.getTimeInstance();
-        df.setTimeZone(TimeZone.getTimeZone("GMT"));
-        // Длина файла
-        String TypeCont = "text/html";
-        if (request.has("ContentType")) {
-            TypeCont = request.getString("ContentType");
-        }
-        System.out.println(TypeCont);
-        os.write(("Content-Type: " + TypeCont + "; charset=utf-8\r\n").getBytes());
-        // Остальные заголовки
-        os.write("Access-Control-Allow-Origin: *\r\n".getBytes());
-        os.write("Access-Control-Allow-Credentials: true\r\n".getBytes());
-        os.write("Access-Control-Expose-Headers: FooBar\r\n".getBytes());
-        os.write("Connection: close\r\n".getBytes());
-        os.write("Server: HTMLserver\r\n\r\n".getBytes());
+        Head("");
     }
 
-    public void Body(String content) throws IOException, JSONException {
+    /**
+     * Добавляем фрагмент HTML страницы
+     * @param content
+     * @throws IOException
+     * @throws JSONException
+     */
+    public void Body(String content) throws IOException {
         os.write(content.getBytes(Charset.forName("UTF-8")));
     }
 
+    /**
+     *  Добавляем текст в тело HTML ответа
+     * @throws IOException
+     */
     public void End() throws IOException {
         os.write(0);
         os.flush();
     }
 
+    /**
+     * Отправляем текст ответа клиенту, при терминальном подключении к серверу
+     * @param text
+     * @throws IOException
+     */
     public void write(String text) throws IOException {
         os.write(text.getBytes());
         os.write(0);
         os.flush();
     }
 
+    /**
+     * Отправляем бинарный ответ клиенту, при терминальном подключении к серверу
+     * @param data
+     * @throws IOException
+     */
     public void write(byte[] data) throws IOException {
         os.write(data);
         os.write(0);
