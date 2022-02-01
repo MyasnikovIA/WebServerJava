@@ -1,3 +1,5 @@
 <div title="Примеры использования контролов"  >
-    <cmpLabe caption="dddddddd"  />
+    <cmpPanel pos="center" >
+        <cmpTextfield />
+    </cmpPanel>
 </div>
