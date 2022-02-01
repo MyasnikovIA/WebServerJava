@@ -5,6 +5,9 @@
 
 package com.miacomsoft;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.*;
 import java.net.*;
 import java.nio.charset.Charset;
@@ -16,9 +19,6 @@ import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import static com.miacomsoft.HttpSrv.ContentType;
 
@@ -66,7 +66,14 @@ public class HttpResponse {
         }
         is.close();
         os.close();
+        inputStreamReader.close();
+        bufferedReader.close();
         socket.close();
+        is = null;
+        os = null;
+        socket = null;
+        inputStreamReader = null;
+        bufferedReader = null;
     }
 
     /**
@@ -247,15 +254,7 @@ public class HttpResponse {
         os.write("HTTP/1.1 200 OK\r\n".getBytes());
         DateFormat df = DateFormat.getTimeInstance();
         df.setTimeZone(TimeZone.getTimeZone("GMT"));
-        String typeCont = "text/html";
-        if(contentType.length()==0) {
-            if (request.has("ContentType")) {
-                typeCont = request.getString("ContentType");
-            }
-        }else if (contentType.indexOf(".") != -1) {
-            typeCont = ContentType(new File(contentType));
-        }
-        os.write(("Content-Type: " + typeCont + "; charset=utf-8\r\n").getBytes());
+        os.write(("Content-Type: " + contentType + "; charset=utf-8\r\n").getBytes());
         os.write("Access-Control-Allow-Origin: *\r\n".getBytes());
         os.write("Access-Control-Allow-Credentials: true\r\n".getBytes());
         os.write("Access-Control-Expose-Headers: FooBar\r\n".getBytes());
@@ -272,6 +271,7 @@ public class HttpResponse {
         Head("");
     }
 
+
     /**
      * Добавляем фрагмент HTML страницы
      * @param content
@@ -282,12 +282,16 @@ public class HttpResponse {
         os.write(content.getBytes(Charset.forName("UTF-8")));
     }
 
+    public void Body(byte[] data) throws IOException {
+        os.write(data);
+    }
+
     /**
      *  Добавляем текст в тело HTML ответа
      * @throws IOException
      */
     public void End() throws IOException {
-        os.write(0);
+        //os.write(0);
         os.flush();
     }
 
@@ -312,5 +316,6 @@ public class HttpResponse {
         os.write(0);
         os.flush();
     }
+
 
 }

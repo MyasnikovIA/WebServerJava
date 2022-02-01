@@ -1,58 +1,56 @@
 package com.miacomsoft;
 
-import org.json.JSONObject;
-
-import java.io.File;
-import java.net.*;
-import java.util.Enumeration;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
+import org.xml.sax.SAXException;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.*;
+import java.util.ArrayList;
 
 public class Main {
 
-    public static void main(String[] args) {
-        String ROOT_DIR = new File("").getAbsolutePath();
-        HttpSrv srv;
-        srv = new HttpSrv(9091);
+    public static void main(String[] args){
+        HttpSrv srv = new HttpSrv(9092);
+        jsonForm frm = new jsonForm(new File("Forms").getAbsolutePath());
 
-        // Обработка запросов из терминала
-        srv.onTerminal((HttpResponse Head) -> {
-            System.out.println(Head.message);
-            Head.write("Сообщение обработано на сервере:" + Head.message);
+        srv.onPage((HttpResponse Head) -> {
+            if (Head.contentZapros.length() == 0) {
+                ArrayList<String> txt2 = frm.getParsedForm("index.html", Head.requestParam);
+                Head.Head(txt2.get(1));
+                Head.Body(txt2.get(0));
+                Head.End();
+                return;
+            }
+
+            if (frm.existFormContent(Head.contentZapros)) {
+                ArrayList<String> txt2 = frm.getParsedForm(Head.contentZapros, Head.requestParam);
+                Head.Head(txt2.get(1));
+                Head.Body(txt2.get(0));
+                Head.End();
+                return;
+            }
+
+            if (frm.existContent(Head.contentZapros)) {
+                System.out.println("Head.contentZapros " + Head.contentZapros);
+                Head.Head(frm.mimeType(Head.contentZapros));
+                Head.Body(frm.readContent(Head.contentZapros));
+                Head.End();
+                return;
+            }
+            if (Head.contentZapros.indexOf("openstreetmap/") != -1) {
+                // /openstreetmap/{s}/{z}/{x}/{y}.png
+                String[] param = Head.contentZapros.split("/");
+                if (param.length == 5) {
+                    File cmpFiletmp = new File(frm.getWWW_DIR().getAbsolutePath() + "/" + Head.contentZapros);
+                    if (!cmpFiletmp.exists()) {
+                        String url = "https://" + param[1] + ".tile.openstreetmap.org/" + param[2] + "/" + param[3] + "/" + param[4];
+                        srv.downloadHttpsFile(url, cmpFiletmp.getAbsolutePath());
+                    }
+                    byte[] data = frm.readContent(Head.contentZapros);
+                    Head.Head(frm.mimeType(Head.contentZapros));
+                    Head.Body(data);
+                    Head.End();
+                }
+            }
         });
-
-        // Обработка запросов браузера URL пути
-        // страница не найдена
-        srv.onPage404((HttpResponse Head) -> {
-            Head.Head();
-            Head.Body("<h1><center>Ресурс не найден</center></h1>");
-            Head.End();
-        });
-
-        // Создаем страницу в коде
-        srv.onPage("index.html", (HttpResponse Head) -> {
-            Head.Head();
-            Head.Body("Текст HTML страницы");
-            Head.Body("fff<h1>Обработка тэгов</h1>ffffffffff");
-            Head.Body("--------------------------");
-            Head.Body(Head.request.toString());
-            Head.Body(Head.request.toString());
-            Head.End();
-        });
-
-        // Отправляем JSON объект в коде
-        srv.onPage("json.html", (HttpResponse Head) -> {
-            Head.sendJson("{'ok':14234234}");
-        });
-
-        // Отправка файла при указании ресурса
-        srv.onPage("test.html",ROOT_DIR+"\\www\\index.html");
-
-        //  Указываем директорию в которой распложен контент
-        srv.onPage(ROOT_DIR+"\\www\\");
-
-        // Запуск сервера
         srv.start();
     }
 }

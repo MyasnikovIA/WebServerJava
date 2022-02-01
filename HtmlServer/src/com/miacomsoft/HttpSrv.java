@@ -8,10 +8,13 @@ package com.miacomsoft;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
@@ -23,54 +26,53 @@ import java.util.logging.Logger;
 
 /**
  * @author MyasnikovIA (20-01-2022)
- *
- *     Состав:
- *          HttpSrv.java - Вэб сервер
- *          HttpResponse.java - объект с описанием запроса и вспомогательными функциями
- *          org.json.jar (05-12-2021) - библиотека для работы с JSON структурами  (JSONObject JSONArray)
- *
- *     Применение:
- *
- *         HttpSrv srv;
- *         srv = new HttpSrv(9090);
- *
- *         // Обработка запросов из терминала
- *         srv.onTerminal((HttpResponse Head) -> {
- *             System.out.println(Head.message);
- *             Head.write("Сообщение обработано на сервере:" + Head.message);
- *         });
- *
- *         // Обработка запросов браузера URL пути
- *         // страница не найдена
- *         srv.onPage404((HttpResponse Head) -> {
- *             Head.Head();
- *             Head.Body("<h1><center>Ресурс не найден</center></h1>");
- *             Head.End();
- *         });
- *
- *         // Создаем страницу в коде
- *         srv.onPage("index.html", (HttpResponse Head) -> {
- *             Head.Head();
- *             Head.Body("Текст HTML страницы");
- *             Head.Body("fff<h1>Обработка тэгов</h1>ffffffffff");
- *             Head.Body("--------------------------");
- *             Head.End();
- *         });
- *
- *         // Отправляем JSON объект в коде
- *         srv.onPage("json.html", (HttpResponse Head) -> {
- *             Head.sendJson("{'ok':14234234}");
- *         });
- *
- *         // Отправка файла при указании ресурса
- *         srv.onPage("test.html","F:\\javaProject\\HtmlServer013\\www\\index.html");
- *
- *         //  Указываем директорию в которой распложен контент
- *         srv.onPage("F:\\javaProject\\HtmlServer013\\www\\");
- *
- *         // Запуск сервера
- *         srv.start();
- *
+ * <p>
+ * Состав:
+ * HttpSrv.java - Вэб сервер
+ * HttpResponse.java - объект с описанием запроса и вспомогательными функциями
+ * org.json.jar (05-12-2021) - библиотека для работы с JSON структурами  (JSONObject JSONArray)
+ * <p>
+ * Применение:
+ * <p>
+ * HttpSrv srv;
+ * srv = new HttpSrv(9090);
+ * <p>
+ * // Обработка запросов из терминала
+ * srv.onTerminal((HttpResponse Head) -> {
+ * System.out.println(Head.message);
+ * Head.write("Сообщение обработано на сервере:" + Head.message);
+ * });
+ * <p>
+ * // Обработка запросов браузера URL пути
+ * // страница не найдена
+ * srv.onPage404((HttpResponse Head) -> {
+ * Head.Head();
+ * Head.Body("<h1><center>Ресурс не найден</center></h1>");
+ * Head.End();
+ * });
+ * <p>
+ * // Создаем страницу в коде
+ * srv.onPage("index.html", (HttpResponse Head) -> {
+ * Head.Head();
+ * Head.Body("Текст HTML страницы");
+ * Head.Body("fff<h1>Обработка тэгов</h1>ffffffffff");
+ * Head.Body("--------------------------");
+ * Head.End();
+ * });
+ * <p>
+ * // Отправляем JSON объект в коде
+ * srv.onPage("json.html", (HttpResponse Head) -> {
+ * Head.sendJson("{'ok':14234234}");
+ * });
+ * <p>
+ * // Отправка файла при указании ресурса
+ * srv.onPage("test.html","F:\\javaProject\\HtmlServer013\\www\\index.html");
+ * <p>
+ * //  Указываем директорию в которой распложен контент
+ * srv.onPage("F:\\javaProject\\HtmlServer013\\www\\");
+ * <p>
+ * // Запуск сервера
+ * srv.start();
  */
 public class HttpSrv {
 
@@ -250,12 +252,14 @@ public class HttpSrv {
                 if (readHead()) {
                     writeResponse();
                 }
-            } catch (Throwable t) {
+            } catch (Exception ex) {
+                Logger.getLogger(HttpSrv.class.getName()).log(Level.SEVERE, null, ex);
             } finally {
                 try {
-                    query.socket.close();
-                } catch (Throwable t) {
-                    /*do nothing*/
+                    query.close();
+                    query = null;
+                } catch (Exception ex) {
+                    Logger.getLogger(HttpSrv.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
@@ -610,6 +614,65 @@ public class HttpSrv {
             return hashtext.toUpperCase();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
+        }
+    }
+    public static byte[] HttpsClientQuery(String https_url) {
+        // String https_url = "https://c.tile.openstreetmap.org/10/747/329.png";
+        try {
+            URL url = new URL(https_url);
+            HttpsURLConnection httpConn = (HttpsURLConnection) url.openConnection();
+            httpConn.addRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)");
+            int responseCode = httpConn.getResponseCode();
+            if (responseCode == HttpsURLConnection.HTTP_OK) {
+                InputStream inputStream = httpConn.getInputStream();
+                ByteArrayOutputStream bufferArr = new ByteArrayOutputStream();
+                int bytesRead = -1;
+                byte[] buffer = new byte[4096];
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    bufferArr.write(buffer, 0, bytesRead);
+                }
+                inputStream.close();
+                return bufferArr.toByteArray();
+            } else {
+                System.out.println("No file to download. Server replied HTTP code: " + responseCode);
+            }
+            httpConn.disconnect();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+        }
+        byte[] data = new byte[1];
+        return data;
+    }
+
+    public static void downloadHttpsFile(String fileURL, String saveFilePath) {
+        try {
+            URL url = new URL(fileURL);
+            HttpsURLConnection httpConn = (HttpsURLConnection) url.openConnection();
+            httpConn.addRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)");
+            int responseCode = httpConn.getResponseCode();
+            if (responseCode == HttpsURLConnection.HTTP_OK) {
+                InputStream inputStream = httpConn.getInputStream();
+                File cmpFiletmp = new File(saveFilePath);
+                if (!cmpFiletmp.getParentFile().exists()) {
+                    cmpFiletmp.getParentFile().mkdirs();
+                }
+                FileOutputStream outputStream = new FileOutputStream(saveFilePath);
+                int bytesRead = -1;
+                byte[] buffer = new byte[4096];
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                outputStream.close();
+                inputStream.close();
+            } else {
+                System.out.println("No file to download. Server replied HTTP code: " + responseCode);
+            }
+            httpConn.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
